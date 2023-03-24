@@ -1,3 +1,34 @@
+--tables
+local vehicle_classes = {
+    "Compact",
+    "Sedan",
+    "SUV",
+    "Coupe",
+    "Muscle",
+    "Sport Classic",
+    "Sport",
+    "Super",
+    "Motorcycle",
+    "Off-road",
+    "Industrial",
+    "Utility",
+    "Van",
+    "Cycle",
+    "Boat",
+    "Helicopter",
+    "Plane",
+    "Service",
+    "Emergency",
+    "Military",
+    "Commercial",
+    "Train",
+}
+
+--get vehicle class
+function GetClass(vehicle)
+    return vehicle_classes[VEHICLE.GET_VEHICLE_CLASS(vehicle)]
+end
+
 --removes a handle
 function RemoveHandle(entity_handle)
 	if entities.handle_to_pointer(entity_handle) ~= 0 then
@@ -6,6 +37,15 @@ function RemoveHandle(entity_handle)
     else
         return false
     end
+end
+
+--checks if it is a handle
+function is_handle(entity)
+    if entities.handle_to_pointer(entity) ~= 0 then
+		return true
+	elseif entities.handle_to_pointer(entity) == 0 then
+		return false
+	end
 end
 
 --check if entity is safe to clear
@@ -194,4 +234,51 @@ end
 function round(num, numDecimalPlaces)
     local mult = 10^(numDecimalPlaces or 0)
     return math.floor(num * mult + 0.5) / mult
+end
+
+--esp bounding box (thanks ren for an improvement to it)
+function draw_line(start, to, colour)
+	GRAPHICS.DRAW_LINE(start.x, start.y, start.z, to.x, to.y, to.z, math.floor(colour.r*255), math.floor(colour.g*255), math.floor(colour.b*255), math.floor(colour.a*255))
+end
+local memory_pos, memory_pos2 = memory.alloc(24), memory.alloc(24)
+function draw_bounding_box(entity_ptr, max_distance, ent_pos, colour)
+    if entity_ptr ~= nil then
+        if is_handle(entity_ptr) then
+            util.toast("[SoulScript] You need to pass a pointer to bounding box")
+            return end
+        local colour = colour or {r = 255, g = 0, b = 255, a = 255}
+        local entity = entities.pointer_to_handle(entity_ptr)
+        local hash = ENTITY.GET_ENTITY_MODEL(entity)
+
+        local dimensions_min, dimensions_max = v3.new(), v3.new()
+        MISC.GET_MODEL_DIMENSIONS(hash, dimensions_min, dimensions_max)
+
+        local top_front_right = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(entity, dimensions_max.x, dimensions_max.y, dimensions_max.z)
+        local top_front_left =  ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(entity, dimensions_min.x, dimensions_max.y, dimensions_max.z)
+        local top_rear_left =   ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(entity, dimensions_min.x, dimensions_min.y, dimensions_max.z)
+        local top_rear_right =  ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(entity, dimensions_max.x, dimensions_min.y, dimensions_max.z)
+
+        local bot_front_right = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(entity, dimensions_max.x, dimensions_max.y, dimensions_min.z)
+        local bot_front_left =  ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(entity, dimensions_min.x, dimensions_max.y, dimensions_min.z)
+        local bot_rear_left =   ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(entity, dimensions_min.x, dimensions_min.y, dimensions_min.z)
+        local bot_rear_right =  ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(entity, dimensions_max.x, dimensions_min.y, dimensions_min.z)
+
+        draw_line(top_front_right,   top_front_left,     colour)
+        draw_line(top_front_left,    top_rear_left,      colour)
+        draw_line(top_rear_left,     top_rear_right,     colour)
+        draw_line(top_rear_right,    top_front_right,    colour)
+
+        draw_line(top_front_right,   bot_front_right,    colour)
+        draw_line(top_front_left,    bot_front_left,     colour)
+        draw_line(top_rear_right,    bot_rear_right,     colour)
+        draw_line(top_rear_left,     bot_rear_left,      colour)
+
+        draw_line(bot_front_right,   bot_front_left,     colour)
+        draw_line(bot_front_left,    bot_rear_left,      colour)
+        draw_line(bot_rear_left,     bot_rear_right,     colour)
+        draw_line(bot_rear_right,    bot_front_right,    colour)
+        if not ENTITY.IS_ENTITY_A_MISSION_ENTITY(entity) or ENTITY.GET_ENTITY_SCRIPT(entity, 0) == "" then
+            SHAPETEST.RELEASE_SCRIPT_GUID_FROM_ENTITY(entity)
+        end
+    end
 end

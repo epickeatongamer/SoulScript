@@ -2,6 +2,7 @@
     Credits
     Prism - Few little checks for clear area and method to clear projectiles/sounds
     Nowiry - The function to get aiming target
+    Sapphire - Helping with dlc stuff
 ]]
 util.require_natives("1663599433")
 require("SoulScript_Functions")
@@ -18,11 +19,13 @@ Settings.targetting_handle = 0
 Settings.targetting_pointer = 0
 Settings.targetting = false
 Settings.targetting_info_script = "N/A"
+Settings.targetting_info_dlc = "N/A"
 Settings.targetting_info_owner = 0
 Settings.targetting_info_type = "N/A"
 Settings.targetting_info_hash = 0
 Settings.targetting_info_name = "N/A"
 Settings.targetting_info_display_name = "N/A"
+Settings.targetting_info_vehicle_class = "N/A"
 Settings.targetting_info_position_x = 0
 Settings.targetting_info_position_y = 0
 Settings.targetting_info_position_z = 0
@@ -42,6 +45,14 @@ local vehicle_blip_esp_table = {}
 local pedestrian_blip_esp_table = {}
 local object_blip_esp_table = {}
 local pickup_blip_esp_table = {}
+--local dlc_vehicle = {}
+--for i = 0, FILES.GET_NUM_DLC_VEHICLES() - 1 do
+--    local outData = memory.alloc(88)
+--    if FILES.GET_DLC_VEHICLE_DATA(i, outData) then
+--        local vehicle_data = memory.read_int(outData + 2*8) --2*8 = cost
+--        util.toast(vehicle_data, TOAST_CONSOLE)
+--    end
+--end
 
 -- Local List: Self
 local self_list = menu.list(menu.my_root(), "Self", {}, "", function(); end)
@@ -252,6 +263,7 @@ world_list_esp_vehicles:toggle_loop("Hexadecimal", {""}, "", function (toggle)
         if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
             local ssx = memory.read_float(sx)
             local ssy = memory.read_float(sy)
+			if ssx == -1 or ssy == -1 then return end
             directx.draw_text(ssx, ssy - 0.1, "Hex: "..modelname2, 1, 0.5, pinkcolor, false)
         end
     end
@@ -267,6 +279,7 @@ world_list_esp_vehicles:toggle_loop("Model Name", {""}, "", function (toggle)
         if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
             local ssx = memory.read_float(sx)
             local ssy = memory.read_float(sy)
+			if ssx == -1 or ssy == -1 then return end
             directx.draw_text(ssx, ssy - 0.1, "Model Name: "..modelname2, 1, 0.5, pinkcolor, false)
         end
     end
@@ -282,9 +295,25 @@ world_list_esp_vehicles:toggle_loop("Owner", {""}, "", function (toggle)
         if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
             local ssx = memory.read_float(sx)
             local ssy = memory.read_float(sy)
+			if ssx == -1 or ssy == -1 then return end
             directx.draw_text(ssx, ssy - 0.1, "Owner: "..owner_name, 1, 0.5, pinkcolor, false)
         end
     end
+end)
+world_list_esp_vehicles:toggle_loop("Bounding Box", {""}, "May experience frame drops with this on", function (toggle)
+	local entTable = entities.get_all_vehicles_as_pointers()
+	for _, ent_ptr in pairs(entTable) do
+		local entPos = entities.get_position(ent_ptr)
+		local sx = memory.alloc()
+		local sy = memory.alloc()
+		if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
+			local ssx = memory.read_float(sx)
+			local ssy = memory.read_float(sy)
+			if ssx ~= -1 or ssy ~= -1 then 
+				draw_bounding_box(ent_ptr, entPos)
+			end
+		end
+	end
 end)
 world_list_esp_vehicles:toggle_loop("Blip", {""}, "", function (toggle)
     local entTable = entities.get_all_vehicles_as_handles()
@@ -309,6 +338,7 @@ world_list_esp_peds:toggle_loop("Hash", {"pedesp", "pedestrianesp"}, "", functio
         if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
             local ssx = memory.read_float(sx)
             local ssy = memory.read_float(sy)
+			if ssx == -1 or ssy == -1 then return end
             directx.draw_text(ssx, ssy - 0.1, "Hash: "..tostring(modelname), 1, 0.5, pinkcolor, false)
         end
     end
@@ -324,6 +354,7 @@ world_list_esp_peds:toggle_loop("Hexadecimal", {""}, "", function (toggle)
         if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
             local ssx = memory.read_float(sx)
             local ssy = memory.read_float(sy)
+			if ssx == -1 or ssy == -1 then return end
             directx.draw_text(ssx, ssy - 0.1, "Hex: "..modelname2, 1, 0.5, pinkcolor, false)
         end
     end
@@ -354,9 +385,25 @@ world_list_esp_peds:toggle_loop("Owner", {""}, "", function (toggle)
         if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
             local ssx = memory.read_float(sx)
             local ssy = memory.read_float(sy)
+			if ssx == -1 or ssy == -1 then return end
             directx.draw_text(ssx, ssy - 0.1, "Owner: "..owner_name, 1, 0.5, pinkcolor, false)
         end
     end
+end)
+world_list_esp_peds:toggle_loop("Bounding Box", {""}, "May experience frame drops with this on", function (toggle)
+	local entTable = entities.get_all_peds_as_pointers()
+	for _, ent_ptr in pairs(entTable) do
+		local entPos = entities.get_position(ent_ptr)
+		local sx = memory.alloc()
+		local sy = memory.alloc()
+		if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
+			local ssx = memory.read_float(sx)
+			local ssy = memory.read_float(sy)
+			if ssx ~= -1 or ssy ~= -1 then 
+				draw_bounding_box(ent_ptr, entPos)
+			end
+		end
+	end
 end)
 world_list_esp_peds:toggle_loop("Blip", {""}, "", function (toggle)
     local entTable = entities.get_all_peds_as_handles()
@@ -381,6 +428,7 @@ world_list_esp_objects:toggle_loop("Hash", {"objesp", "objectesp"}, "", function
         if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
             local ssx = memory.read_float(sx)
             local ssy = memory.read_float(sy)
+			if ssx == -1 or ssy == -1 then return end
             directx.draw_text(ssx, ssy - 0.1, "Hash: "..tostring(modelname), 1, 0.5, pinkcolor, false)
         end
     end
@@ -396,6 +444,7 @@ world_list_esp_objects:toggle_loop("Hexadecimal", {""}, "", function (toggle)
         if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
             local ssx = memory.read_float(sx)
             local ssy = memory.read_float(sy)
+			if ssx == -1 or ssy == -1 then return end
             directx.draw_text(ssx, ssy - 0.1, "Hex: "..modelname2, 1, 0.5, pinkcolor, false)
         end
     end
@@ -411,6 +460,7 @@ world_list_esp_objects:toggle_loop("Model Name", {""}, "", function (toggle)
         if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
             local ssx = memory.read_float(sx)
             local ssy = memory.read_float(sy)
+			if ssx == -1 or ssy == -1 then return end
             directx.draw_text(ssx, ssy - 0.1, "Model Name: "..modelname2, 1, 0.5, pinkcolor, false)
         end
     end
@@ -426,9 +476,25 @@ world_list_esp_objects:toggle_loop("Owner", {""}, "", function (toggle)
         if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
             local ssx = memory.read_float(sx)
             local ssy = memory.read_float(sy)
+			if ssx == -1 or ssy == -1 then return end
             directx.draw_text(ssx, ssy - 0.1, "Owner: "..owner_name, 1, 0.5, pinkcolor, false)
         end
     end
+end)
+world_list_esp_objects:toggle_loop("Bounding Box", {""}, "May experience frame drops with this on", function (toggle)
+	local entTable = entities.get_all_objects_as_pointers()
+	for _, ent_ptr in pairs(entTable) do
+		local entPos = entities.get_position(ent_ptr)
+		local sx = memory.alloc()
+		local sy = memory.alloc()
+		if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
+			local ssx = memory.read_float(sx)
+			local ssy = memory.read_float(sy)
+			if ssx ~= -1 or ssy ~= -1 then 
+				draw_bounding_box(ent_ptr, entPos)
+			end
+		end
+	end
 end)
 world_list_esp_objects:toggle_loop("Blip", {""}, "", function (toggle)
     local entTable = entities.get_all_objects_as_handles()
@@ -454,6 +520,7 @@ world_list_esp_pickups:toggle_loop("Hash", {"pickupesp"}, "", function (toggle)
         if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
             local ssx = memory.read_float(sx)
             local ssy = memory.read_float(sy)
+			if ssx == -1 or ssy == -1 then return end
             directx.draw_text(ssx, ssy - 0.1, "Hash: "..tostring(modelname), 1, 0.5, pinkcolor, false)
         end
     end
@@ -469,6 +536,7 @@ world_list_esp_pickups:toggle_loop("Hexadecimal", {""}, "", function (toggle)
         if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
             local ssx = memory.read_float(sx)
             local ssy = memory.read_float(sy)
+			if ssx == -1 or ssy == -1 then return end
             directx.draw_text(ssx, ssy - 0.1, "Hex: "..modelname2, 1, 0.5, pinkcolor, false)
         end
     end
@@ -484,6 +552,7 @@ world_list_esp_pickups:toggle_loop("Model Name", {""}, "", function (toggle)
         if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
             local ssx = memory.read_float(sx)
             local ssy = memory.read_float(sy)
+			if ssx == -1 or ssy == -1 then return end
             directx.draw_text(ssx, ssy - 0.1, "Model Name: "..modelname2, 1, 0.5, pinkcolor, false)
         end
     end
@@ -499,9 +568,25 @@ world_list_esp_pickups:toggle_loop("Owner", {""}, "", function (toggle)
         if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
             local ssx = memory.read_float(sx)
             local ssy = memory.read_float(sy)
+			if ssx == -1 or ssy == -1 then return end
             directx.draw_text(ssx, ssy - 0.1, "Owner: "..owner_name, 1, 0.5, pinkcolor, false)
         end
     end
+end)
+world_list_esp_pickups:toggle_loop("Bounding Box", {""}, "May experience frame drops with this on", function (toggle)
+	local entTable = entities.get_all_pickups_as_pointers()
+	for _, ent_ptr in pairs(entTable) do
+		local entPos = entities.get_position(ent_ptr)
+		local sx = memory.alloc()
+		local sy = memory.alloc()
+		if GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(entPos.x, entPos.y, entPos.z, sx, sy) then
+			local ssx = memory.read_float(sx)
+			local ssy = memory.read_float(sy)
+			if ssx ~= -1 or ssy ~= -1 then 
+				draw_bounding_box(ent_ptr, entPos)
+			end
+		end
+	end
 end)
 world_list_esp_pickups:toggle_loop("Blip", {""}, "", function (toggle)
     local entTable = entities.get_all_pickups_as_handles()
@@ -660,14 +745,18 @@ util.create_tick_handler(function()
         -- Vehicle
         if Settings.targetting_info_type == "Vehicle" then
             Settings.targetting_info_display_name = util.get_label_text(VEHICLE.GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(Settings.targetting_info_hash))
+            Settings.targetting_info_vehicle_class = GetClass(Settings.targetting_handle)
             Settings.targetting_info_max_speed_mph = (max_speed * 2.236936)
             Settings.targetting_info_max_speed_kph = (max_speed * 3.6)
             menu.set_visible(targetting_display_name, true)
+            menu.set_visible(targetting_vehicle_class, true)
         else
             Settings.targetting_info_display_name = "N/A"
+            Settings.targetting_info_vehicle_class = "N/A"
             Settings.targetting_info_max_speed_mph = 0
             Settings.targetting_info_max_speed_kph = 0
             menu.set_visible(targetting_display_name, false)
+            menu.set_visible(targetting_vehicle_class, false)
         end
 
         -- Ped
@@ -690,6 +779,7 @@ util.create_tick_handler(function()
         menu.set_menu_name(targetting_type, "Entity Type: "..Settings.targetting_info_type)
         menu.set_menu_name(targetting_name, "Name: "..Settings.targetting_info_name.." ("..Settings.targetting_info_hash..")")
         menu.set_menu_name(targetting_display_name, "Display Name: "..Settings.targetting_info_display_name)
+        menu.set_menu_name(targetting_vehicle_class, "Vehicle Class: "..Settings.targetting_info_vehicle_class)
         menu.set_menu_name(targetting_position_x, "X: "..round(Settings.targetting_info_position_x))
         menu.set_menu_name(targetting_position_y, "Y: "..round(Settings.targetting_info_position_y))
         menu.set_menu_name(targetting_position_z, "Z: "..round(Settings.targetting_info_position_z))
@@ -705,6 +795,7 @@ util.create_tick_handler(function()
         menu.set_menu_name(targetting_health, "Health: "..Settings.targetting_info_health.."/"..Settings.targetting_info_max_health)
         menu.set_menu_name(targetting_armor, "Armor: "..Settings.targetting_info_armor.."/"..Settings.targetting_info_max_armor)
         menu.set_menu_name(targetting_script, "Script: "..Settings.targetting_info_script)
+        menu.set_menu_name(targetting_script, "DLC: "..Settings.targetting_info_dlc)
         menu.set_menu_name(targetting_handle, "Handle: "..Settings.targetting_handle)
         menu.set_menu_name(targetting_pointer, "Pointer: "..Settings.targetting_pointer)
     else
@@ -714,6 +805,7 @@ util.create_tick_handler(function()
         Settings.targetting_info_hash = 0
         Settings.targetting_info_name = "N/A"
         Settings.targetting_info_display_name = "N/A"
+        Settings.targetting_info_vehicle_class = "N/A"
         Settings.targetting_info_position_x = 0
         Settings.targetting_info_position_y = 0
         Settings.targetting_info_position_z = 0
@@ -727,12 +819,14 @@ util.create_tick_handler(function()
         Settings.targetting_info_max_health = 0
         Settings.targetting_info_armor = 0
         Settings.targetting_info_max_armor = 0
+        Settings.targetting_info_dlc = "N/A"
 
         -- Setting Menu Names
         menu.set_menu_name(targetting_owner, "Owner: "..players.get_name(Settings.targetting_info_owner))
         menu.set_menu_name(targetting_type, "Entity Type: "..Settings.targetting_info_type)
         menu.set_menu_name(targetting_name, "Name: "..Settings.targetting_info_name.." ("..Settings.targetting_info_hash..")")
         menu.set_menu_name(targetting_display_name, "Display Name: "..Settings.targetting_info_display_name)
+        menu.set_menu_name(targetting_vehicle_class, "Vehicle Class: "..Settings.targetting_info_vehicle_class)
         menu.set_menu_name(targetting_position_x, "X: "..round(Settings.targetting_info_position_x))
         menu.set_menu_name(targetting_position_y, "Y: "..round(Settings.targetting_info_position_y))
         menu.set_menu_name(targetting_position_z, "Z: "..round(Settings.targetting_info_position_z))
@@ -743,6 +837,7 @@ util.create_tick_handler(function()
         menu.set_menu_name(targetting_health, "Health: "..Settings.targetting_info_health.."/"..Settings.targetting_info_max_health)
         menu.set_menu_name(targetting_armor, "Armor: "..Settings.targetting_info_armor.."/"..Settings.targetting_info_max_armor)
         menu.set_menu_name(targetting_script, "Script: "..Settings.targetting_info_script)
+        menu.set_menu_name(targetting_script, "DLC: "..Settings.targetting_info_dlc)
         menu.set_menu_name(targetting_handle, "Handle: "..Settings.targetting_handle)
         menu.set_menu_name(targetting_pointer, "Pointer: "..Settings.targetting_pointer)
     end
