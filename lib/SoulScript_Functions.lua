@@ -26,7 +26,7 @@ local vehicle_classes = {
 
 --get vehicle class
 function GetClass(vehicle)
-    return vehicle_classes[VEHICLE.GET_VEHICLE_CLASS(vehicle)]
+    return vehicle_classes[VEHICLE.GET_VEHICLE_CLASS(vehicle) + 1]
 end
 
 --removes a handle
@@ -280,5 +280,15 @@ function draw_bounding_box(entity_ptr, max_distance, ent_pos, colour)
         if not ENTITY.IS_ENTITY_A_MISSION_ENTITY(entity) or ENTITY.GET_ENTITY_SCRIPT(entity, 0) == "" then
             SHAPETEST.RELEASE_SCRIPT_GUID_FROM_ENTITY(entity)
         end
+    end
+end
+
+--check if a ped is an enemy (WIP)
+function IsPedEnemy(ped)
+    local relationship = PED.GET_RELATIONSHIP_BETWEEN_PEDS(players.user_ped(), ped)
+    if relationship == 4 or relationship == 5 then
+        return true
+    else
+        return false
     end
 end

@@ -39,26 +39,20 @@ Settings.targetting_info_health = 0
 Settings.targetting_info_max_health = 0
 Settings.targetting_info_armor = 0
 Settings.targetting_info_max_armor = 0
+Settings.steering_type = 0
 
 -- Tables
 local vehicle_blip_esp_table = {}
 local pedestrian_blip_esp_table = {}
 local object_blip_esp_table = {}
 local pickup_blip_esp_table = {}
---local dlc_vehicle = {}
---for i = 0, FILES.GET_NUM_DLC_VEHICLES() - 1 do
---    local outData = memory.alloc(88)
---    if FILES.GET_DLC_VEHICLE_DATA(i, outData) then
---        local vehicle_data = memory.read_int(outData + 2*8) --2*8 = cost
---        util.toast(vehicle_data, TOAST_CONSOLE)
---    end
---end
 
 -- Local List: Self
 local self_list = menu.list(menu.my_root(), "Self", {}, "", function(); end)
 
 -- Local List: Vehicle
 local vehicle_list = menu.list(menu.my_root(), "Vehicle", {}, "", function(); end)
+local vehicle_list_handling = menu.list(vehicle_list, "Handling", {}, "", function(); end)
 
 vehicle_list:toggle_loop("Vehicle Friendly Fire", {""}, "Be able to shoot people inside your current vehicle", function()
 	if players.get_vehicle_model(players.user()) ~= 0 then
@@ -98,6 +92,49 @@ vehicle_list:toggle_loop("Engine Lump", {""}, "", function (toggle)
     	util.yield(600)
 	end
 end)
+vehicle_list_handling:toggle_loop("Enable F1 Boost", {""}, "Need to respawn vehicle for it to take effect", function (toggle)
+	if players.get_vehicle_model(players.user()) ~= 0 then
+		MISC.SET_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 2)
+        util.yield(100)
+	end
+end, function() MISC.CLEAR_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 2) end)
+vehicle_list_handling:toggle_loop("Offroad Mode", {""}, "Need to respawn vehicle for it to take effect", function (toggle)
+	if players.get_vehicle_model(players.user()) ~= 0 then
+		MISC.SET_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 21)
+        util.yield(100)
+	end
+end, function() MISC.CLEAR_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 21) end)
+vehicle_list_handling:list_select("Steering Type", {}, "", {"Front", "All", "Rear"}, 1, function(index, value)
+	switch index do
+		case 1:
+			Settings.steering_type = 0
+		break
+		case 2:
+            Settings.steering_type = 1
+		break
+		case 3:
+            Settings.steering_type = 2
+		break
+	end
+end)
+vehicle_list_handling:toggle_loop("Apply Steering Type", {""}, "Need to respawn vehicle for it to take effect", function (toggle)
+	if players.get_vehicle_model(players.user()) ~= 0 then
+        if Settings.steering_type == 0 then
+		    MISC.CLEAR_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 5)
+		    MISC.CLEAR_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 7)
+        elseif Settings.steering_type == 1 then
+		    MISC.CLEAR_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 5)
+            MISC.SET_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 7)
+        elseif Settings.steering_type == 2 then
+            MISC.SET_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 5)
+		    MISC.CLEAR_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 7)
+        end
+        util.yield(100)
+	end
+end, function() 
+    MISC.CLEAR_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 5) 
+    MISC.CLEAR_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 7)
+end)
 
 -- Local List: Online
 local online_list = menu.list(menu.my_root(), "Online", {}, "", function(); end)
@@ -125,6 +162,7 @@ local world_list_esp_vehicles = menu.list(world_list_esp, "Vehicles", {}, "", fu
 local world_list_esp_peds = menu.list(world_list_esp, "Peds", {}, "", function(); end)
 local world_list_esp_objects = menu.list(world_list_esp, "Objects", {}, "", function(); end)
 local world_list_esp_pickups = menu.list(world_list_esp, "Pickups", {}, "", function(); end)
+--local world_list_esp_enemys = menu.list(world_list_esp, "Enemys", {}, "", function(); end)
 local world_list_spawner = menu.list(world_list, "Spawner", {}, "", function(); end)
 
 world_list_cleararea:list_action("Clear All", {}, "", {"Vehicles", "Peds", "Objects", "Pickups", "Ropes", "Projectiles", "Sounds"}, function(index, name)
@@ -694,6 +732,7 @@ misc_list_targetting_information:divider("Model")
 local targetting_type = misc_list_targetting_information:readonly("N/A")
 local targetting_name = misc_list_targetting_information:readonly("N/A")
 local targetting_display_name = misc_list_targetting_information:readonly("N/A")
+local targetting_vehicle_class = misc_list_targetting_information:readonly("N/A")
 misc_list_targetting_information:divider("Location")
 local targetting_position_x = misc_list_targetting_information:readonly("N/A")
 local targetting_position_y = misc_list_targetting_information:readonly("N/A")
