@@ -8,6 +8,14 @@
 util.require_natives("1663599433")
 require("SoulScript_Functions")
 
+-- Tables
+local vehicle_blip_esp_table = {}
+local pedestrian_blip_esp_table = {}
+local object_blip_esp_table = {}
+local pickup_blip_esp_table = {}
+local player_blip_table = {}
+local join_timer_offsets = {}
+
 -- Colours
 local whitecolor = {r = 1.0, g = 1.0, b = 1.0, a = 1.0}
 local blackcolor = {r = 0.0, g = 0.0, b = 0.0, a = 1.0}
@@ -47,14 +55,12 @@ Settings.instant_respawn = false
 Settings.folder_open_self = false
 Settings.folder_open_vehicle = false
 Settings.join_timer = false
+Settings.player_cone_colour = 1
 
--- Tables
-local vehicle_blip_esp_table = {}
-local pedestrian_blip_esp_table = {}
-local object_blip_esp_table = {}
-local pickup_blip_esp_table = {}
-local player_blip_table = {}
-local join_timer_offsets = {}
+-- Load Timer Table
+for i = 0, 31 do
+	join_timer_offsets[i] = 0
+end
 
 -- Local List: Self
 local self_list = menu.list(menu.my_root(), "Self", {}, "", function() Settings.folder_open_self = true end, function() Settings.folder_open_self = false end)
@@ -1052,7 +1058,7 @@ util.create_tick_handler(function()
     -- Join Timers
     local joining_offset = 0
     for pos, pid in ipairs(players.list()) do
-        if Settings.join_timer and memory.read_byte(memory.script_global(2657589 + 1 + (pid * 466) + 232)) == 0 and players.get_name(pid) ~= nil then
+        if Settings.join_timer and memory.read_byte(memory.script_global(2657589 + 1 + (pid * 466) + 232)) == 0 and PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid) and pid ~= players.user() then
             join_timer_offsets[pid] = joining_offset
             joining_offset = joining_offset + 1
         end
@@ -1061,14 +1067,15 @@ end)
 
 -- On Join function
 players.on_join(function(pid)
-	if Settings.join_timer and players.get_name(pid) ~= nil then
+	if Settings.join_timer and PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid) and pid ~= players.user() then
 		local timer = 0
 		repeat
 			timer = timer + 1
-			directx.draw_text(0, 0 + (join_timer_offsets[pid] * 0.02), players.get_name(pid).." ("..pid.."): "..(timer/100).."s", ALIGN_TOP_LEFT, 0.5, pinkcolor, false)
+            if join_timer_offsets[pid] == nil then join_timer_offsets[pid] = 32; util.toast("Nil value for "..pid) end
+			directx.draw_text(0, (join_timer_offsets[pid] * 0.02), players.get_name(pid).." ("..pid.."): "..(timer/100).."s", ALIGN_TOP_LEFT, 0.5, pinkcolor, false)
 			util.yield()
 		until memory.read_byte(memory.script_global(2657589 + 1 + (pid * 466) + 232)) == 99
-        join_timer_offsets[pid] = 0
+        if timer > 1000 --[[10 seconds]] then util.toast(players.get_name(pid).." took "..(timer/100).."s to load into the lobby", TOAST_CONSOLE) end
 	end
 end)
 
