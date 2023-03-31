@@ -3,6 +3,7 @@
     Prism - Few little checks for clear area and method to clear projectiles/sounds
     Nowiry - The function to get aiming target
     Sapphire - Helping with dlc stuff
+    Aaron - Instant respawn feature
 ]]
 util.require_natives("1663599433")
 require("SoulScript_Functions")
@@ -25,6 +26,7 @@ Settings.targetting_info_type = "N/A"
 Settings.targetting_info_hash = 0
 Settings.targetting_info_name = "N/A"
 Settings.targetting_info_display_name = "N/A"
+Settings.targetting_info_manufacturer = "N/A"
 Settings.targetting_info_vehicle_class = "N/A"
 Settings.targetting_info_position_x = 0
 Settings.targetting_info_position_y = 0
@@ -40,22 +42,38 @@ Settings.targetting_info_max_health = 0
 Settings.targetting_info_armor = 0
 Settings.targetting_info_max_armor = 0
 Settings.steering_type = 0
+Settings.drive_type = 0
+Settings.instant_respawn = false
+Settings.folder_open_self = false
+Settings.folder_open_vehicle = false
 
 -- Tables
 local vehicle_blip_esp_table = {}
 local pedestrian_blip_esp_table = {}
 local object_blip_esp_table = {}
 local pickup_blip_esp_table = {}
+local player_blip_table = {}
 
 -- Local List: Self
-local self_list = menu.list(menu.my_root(), "Self", {}, "", function(); end)
+local self_list = menu.list(menu.my_root(), "Self", {}, "", function() Settings.folder_open_self = true end, function() Settings.folder_open_self = false end)
+
+self_list:toggle_loop("No Object Collision", {""}, "No collision with objects", function()
+	local ped = players.user_ped()
+	for _, object in pairs(entities.get_all_objects_as_handles()) do
+		ENTITY.SET_ENTITY_NO_COLLISION_ENTITY(object, ped, true)
+	end
+    RemoveHandle(ped)
+end)
+menu.toggle(self_list, "Instant Respawn", {"instantrespawn", "instantspawn", "instarespawn", "instaspawn"}, "", function(state)
+	Settings.instant_respawn = state
+end, Settings.instant_respawn)
 
 -- Local List: Vehicle
-local vehicle_list = menu.list(menu.my_root(), "Vehicle", {}, "", function(); end)
+local vehicle_list = menu.list(menu.my_root(), "Vehicle", {}, "", function() Settings.folder_open_vehicle = true end, function() Settings.folder_open_vehicle = false end)
 local vehicle_list_handling = menu.list(vehicle_list, "Handling", {}, "", function(); end)
 
 vehicle_list:toggle_loop("Vehicle Friendly Fire", {""}, "Be able to shoot people inside your current vehicle", function()
-	if players.get_vehicle_model(players.user()) ~= 0 then
+	if players.get_vehicle_model(players.user()) then
 		local vehicle = entities.get_user_vehicle_as_handle()
 		local my_group = PED.GET_PED_RELATIONSHIP_GROUP_HASH(players.user_ped())
 
@@ -81,25 +99,25 @@ vehicle_list:toggle_loop("No Object Collision", {""}, "No collision with objects
 	end
 end)
 vehicle_list:toggle_loop("Shoot Flames", {""}, "", function (toggle)
-	if players.get_vehicle_model(players.user()) ~= 0 then
+	if players.get_vehicle_model(players.user()) then
 		entities.set_rpm(entities.get_user_vehicle_as_pointer(), 1.2)
     	util.yield(250)
 	end
 end)
 vehicle_list:toggle_loop("Engine Lump", {""}, "", function (toggle)
-	if players.get_vehicle_model(players.user()) ~= 0 then
+	if players.get_vehicle_model(players.user()) then
 		entities.set_rpm(entities.get_user_vehicle_as_pointer(), 1.006)
     	util.yield(600)
 	end
 end)
 vehicle_list_handling:toggle_loop("Enable F1 Boost", {""}, "Need to respawn vehicle for it to take effect", function (toggle)
-	if players.get_vehicle_model(players.user()) ~= 0 then
+	if players.get_vehicle_model(players.user()) then
 		MISC.SET_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 2)
         util.yield(100)
 	end
 end, function() MISC.CLEAR_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 2) end)
 vehicle_list_handling:toggle_loop("Offroad Mode", {""}, "Need to respawn vehicle for it to take effect", function (toggle)
-	if players.get_vehicle_model(players.user()) ~= 0 then
+	if players.get_vehicle_model(players.user()) then
 		MISC.SET_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 21)
         util.yield(100)
 	end
@@ -118,7 +136,7 @@ vehicle_list_handling:list_select("Steering Type", {}, "", {"Front", "All", "Rea
 	end
 end)
 vehicle_list_handling:toggle_loop("Apply Steering Type", {""}, "Need to respawn vehicle for it to take effect", function (toggle)
-	if players.get_vehicle_model(players.user()) ~= 0 then
+	if players.get_vehicle_model(players.user()) then
         if Settings.steering_type == 0 then
 		    MISC.CLEAR_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 5)
 		    MISC.CLEAR_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 7)
@@ -134,6 +152,53 @@ vehicle_list_handling:toggle_loop("Apply Steering Type", {""}, "Need to respawn 
 end, function() 
     MISC.CLEAR_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 5) 
     MISC.CLEAR_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 7)
+end)
+vehicle_list_handling:list_select("Drive Type", {}, "", {"RWD", "AWD (30:70)", "AWD (50:50)", "AWD (70:30)", "FWD", "Full AWD"}, 1, function(index, value)
+	switch index do
+		case 1:
+			Settings.drive_type = 0
+		break
+		case 2:
+            Settings.drive_type = 1
+		break
+		case 3:
+            Settings.drive_type = 2
+		break
+		case 4:
+            Settings.drive_type = 3
+		break
+		case 5:
+            Settings.drive_type = 4
+		break
+		case 6:
+            Settings.drive_type = 5
+		break
+	end
+end)
+vehicle_list_handling:toggle_loop("Apply Drive Type", {""}, "These notes need to be read\n\nfwd is very temperamental\n\nfull awd is temperamental aswell, but needs the vehicle to be respawned to apply most of the time", function (toggle)
+	if players.get_vehicle_model(players.user()) then
+        local CHandlingData = entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer())
+        if Settings.drive_type == 0 then
+		    memory.write_float(CHandlingData + 0x0044, "1.000000") -- rear
+		    memory.write_float(CHandlingData + 0x0048, "0.000000") -- front
+        elseif Settings.drive_type == 1 then
+		    memory.write_float(CHandlingData + 0x0044, "0.750000") -- rear
+		    memory.write_float(CHandlingData + 0x0048, "0.350000") -- front
+        elseif Settings.drive_type == 2 then
+		    memory.write_float(CHandlingData + 0x0044, "0.500000") -- rear
+		    memory.write_float(CHandlingData + 0x0048, "0.500000") -- front
+        elseif Settings.drive_type == 3 then
+		    memory.write_float(CHandlingData + 0x0044, "0.350000") -- rear
+		    memory.write_float(CHandlingData + 0x0048, "0.750000") -- front
+        elseif Settings.drive_type == 4 then
+		    memory.write_float(CHandlingData + 0x0044, "0.000000") -- rear
+		    memory.write_float(CHandlingData + 0x0048, "1.000000") -- front
+        elseif Settings.drive_type == 5 then
+		    memory.write_float(CHandlingData + 0x0044, "1.000000") -- rear
+		    memory.write_float(CHandlingData + 0x0048, "1.000000") -- front
+        end
+        util.yield(100)
+	end
 end)
 
 -- Local List: Online
@@ -164,6 +229,7 @@ local world_list_esp_objects = menu.list(world_list_esp, "Objects", {}, "", func
 local world_list_esp_pickups = menu.list(world_list_esp, "Pickups", {}, "", function(); end)
 --local world_list_esp_enemys = menu.list(world_list_esp, "Enemys", {}, "", function(); end)
 local world_list_spawner = menu.list(world_list, "Spawner", {}, "", function(); end)
+local world_list_blips = menu.list(world_list, "Blip Options", {}, "", function(); end)
 
 world_list_cleararea:list_action("Clear All", {}, "", {"Vehicles", "Peds", "Objects", "Pickups", "Ropes", "Projectiles", "Sounds"}, function(index, name)
 	util.toast("Clearing "..name:lower())
@@ -338,7 +404,7 @@ world_list_esp_vehicles:toggle_loop("Owner", {""}, "", function (toggle)
         end
     end
 end)
-world_list_esp_vehicles:toggle_loop("Bounding Box", {""}, "May experience frame drops with this on", function (toggle)
+world_list_esp_vehicles:toggle_loop("Boundary Box", {""}, "May experience frame drops with this on", function (toggle)
 	local entTable = entities.get_all_vehicles_as_pointers()
 	for _, ent_ptr in pairs(entTable) do
 		local entPos = entities.get_position(ent_ptr)
@@ -348,7 +414,7 @@ world_list_esp_vehicles:toggle_loop("Bounding Box", {""}, "May experience frame 
 			local ssx = memory.read_float(sx)
 			local ssy = memory.read_float(sy)
 			if ssx ~= -1 or ssy ~= -1 then 
-				draw_bounding_box(ent_ptr, entPos)
+				DrawBoundaryBox(ent_ptr, entPos)
 			end
 		end
 	end
@@ -428,7 +494,7 @@ world_list_esp_peds:toggle_loop("Owner", {""}, "", function (toggle)
         end
     end
 end)
-world_list_esp_peds:toggle_loop("Bounding Box", {""}, "May experience frame drops with this on", function (toggle)
+world_list_esp_peds:toggle_loop("Boundary Box", {""}, "May experience frame drops with this on", function (toggle)
 	local entTable = entities.get_all_peds_as_pointers()
 	for _, ent_ptr in pairs(entTable) do
 		local entPos = entities.get_position(ent_ptr)
@@ -438,7 +504,7 @@ world_list_esp_peds:toggle_loop("Bounding Box", {""}, "May experience frame drop
 			local ssx = memory.read_float(sx)
 			local ssy = memory.read_float(sy)
 			if ssx ~= -1 or ssy ~= -1 then 
-				draw_bounding_box(ent_ptr, entPos)
+				DrawBoundaryBox(ent_ptr, entPos)
 			end
 		end
 	end
@@ -519,7 +585,7 @@ world_list_esp_objects:toggle_loop("Owner", {""}, "", function (toggle)
         end
     end
 end)
-world_list_esp_objects:toggle_loop("Bounding Box", {""}, "May experience frame drops with this on", function (toggle)
+world_list_esp_objects:toggle_loop("Boundary Box", {""}, "May experience frame drops with this on", function (toggle)
 	local entTable = entities.get_all_objects_as_pointers()
 	for _, ent_ptr in pairs(entTable) do
 		local entPos = entities.get_position(ent_ptr)
@@ -529,7 +595,7 @@ world_list_esp_objects:toggle_loop("Bounding Box", {""}, "May experience frame d
 			local ssx = memory.read_float(sx)
 			local ssy = memory.read_float(sy)
 			if ssx ~= -1 or ssy ~= -1 then 
-				draw_bounding_box(ent_ptr, entPos)
+				DrawBoundaryBox(ent_ptr, entPos)
 			end
 		end
 	end
@@ -611,7 +677,7 @@ world_list_esp_pickups:toggle_loop("Owner", {""}, "", function (toggle)
         end
     end
 end)
-world_list_esp_pickups:toggle_loop("Bounding Box", {""}, "May experience frame drops with this on", function (toggle)
+world_list_esp_pickups:toggle_loop("Boundary Box", {""}, "May experience frame drops with this on", function (toggle)
 	local entTable = entities.get_all_pickups_as_pointers()
 	for _, ent_ptr in pairs(entTable) do
 		local entPos = entities.get_position(ent_ptr)
@@ -621,7 +687,7 @@ world_list_esp_pickups:toggle_loop("Bounding Box", {""}, "May experience frame d
 			local ssx = memory.read_float(sx)
 			local ssy = memory.read_float(sy)
 			if ssx ~= -1 or ssy ~= -1 then 
-				draw_bounding_box(ent_ptr, entPos)
+				DrawBoundaryBox(ent_ptr, entPos)
 			end
 		end
 	end
@@ -686,6 +752,30 @@ world_list_spawner:action("Spawn Object", {"objspawn"}, "Spawns a object with th
 	end
 end)
 
+world_list_blips:toggle_loop("Draw Player Cones", {}, "", function()
+	for _, pid in ipairs(players.list()) do
+		local blip = HUD.GET_BLIP_FROM_ENTITY(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid))
+		player_blip_table[#player_blip_table + 1] = blip
+		if pid ~= players.user() and HUD.IS_BLIP_ON_MINIMAP(blip) then
+    		HUD.SET_BLIP_SHOW_CONE(blip, true, 1)
+		end
+	end
+end, function() 
+	for pos, blip in ipairs(player_blip_table) do
+		HUD.SET_BLIP_SHOW_CONE(blip, false, 1)
+		table.remove(player_blip_table, pos)
+	end
+end)
+world_list_blips:toggle_loop("Ignore Police Cones", {}, "", function()
+    if players.get_vehicle_model(players.user()) then
+		VEHICLE.SET_DISABLE_WANTED_CONES_RESPONSE(entities.get_user_vehicle_as_handle(), true)
+	end
+end, function() 
+    if players.get_vehicle_model(players.user()) then
+		VEHICLE.SET_DISABLE_WANTED_CONES_RESPONSE(entities.get_user_vehicle_as_handle(), false)
+	end
+end)
+
 -- Local List: Misc
 local misc_list = menu.list(menu.my_root(), "Miscellaneous", {}, "", function(); end)
 local misc_list_targetting = menu.list(misc_list, "Targetting", {}, "", function(); end)
@@ -732,6 +822,7 @@ misc_list_targetting_information:divider("Model")
 local targetting_type = misc_list_targetting_information:readonly("N/A")
 local targetting_name = misc_list_targetting_information:readonly("N/A")
 local targetting_display_name = misc_list_targetting_information:readonly("N/A")
+local targetting_manufacturer = misc_list_targetting_information:readonly("N/A")
 local targetting_vehicle_class = misc_list_targetting_information:readonly("N/A")
 misc_list_targetting_information:divider("Location")
 local targetting_position_x = misc_list_targetting_information:readonly("N/A")
@@ -753,7 +844,28 @@ local targetting_pointer = misc_list_targetting_information:readonly("N/A")
 
 -- Local List: Settings
 local settings_list = menu.list(menu.my_root(), "Settings", {}, "", function(); end)
+local settings_list_bounding_box = menu.list(settings_list, "Boundary Box", {}, "", function(); end)
 
+settings_list_bounding_box:toggle_loop("Draw in self options", {}, "", function()
+    if menu.is_open() then
+	    if Settings.folder_open_self or IsInParent(menu.get_current_menu_list(), menu.ref_by_path("Self")) then
+            local ped = entities.handle_to_pointer(players.user_ped())
+            local position = entities.get_position(ped)
+	    	DrawBoundaryBox(ped, position)
+	    end
+    end
+end)
+settings_list_bounding_box:toggle_loop("Draw in vehicle options", {}, "", function()
+    if menu.is_open() then
+	    if Settings.folder_open_vehicle or IsInParent(menu.get_current_menu_list(), menu.ref_by_path("Vehicle")) then
+	    	if players.get_vehicle_model(players.user()) then
+                local vehicle = entities.get_user_vehicle_as_pointer()
+                local position = entities.get_position(vehicle)
+	    		DrawBoundaryBox(vehicle, position)
+	    	end
+	    end
+    end
+end)
 
 -- Update Targetting Information
 util.create_tick_handler(function()
@@ -764,6 +876,9 @@ util.create_tick_handler(function()
         local sxa = memory.alloc()
 		local sya = memory.alloc()
         local script = ""
+        local CAutomobile = Settings.targetting_pointer
+        local CVehicleModelInfo = 0x20
+        local m_manufacturer = memory.read_string(memory.read_long(CAutomobile + CVehicleModelInfo) + 0x02A4)
 		GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(position.x, position.y, position.z, sxa, sya)
         Settings.targetting_info_script = ENTITY.GET_ENTITY_SCRIPT(Settings.targetting_handle, script)
         Settings.targetting_info_owner = entities.get_owner(Settings.targetting_pointer)
@@ -784,28 +899,35 @@ util.create_tick_handler(function()
         -- Vehicle
         if Settings.targetting_info_type == "Vehicle" then
             Settings.targetting_info_display_name = util.get_label_text(VEHICLE.GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(Settings.targetting_info_hash))
+            Settings.targetting_info_manufacturer = m_manufacturer:lower()
             Settings.targetting_info_vehicle_class = GetClass(Settings.targetting_handle)
             Settings.targetting_info_max_speed_mph = (max_speed * 2.236936)
             Settings.targetting_info_max_speed_kph = (max_speed * 3.6)
             menu.set_visible(targetting_display_name, true)
+            menu.set_visible(targetting_manufacturer, true)
             menu.set_visible(targetting_vehicle_class, true)
         else
             Settings.targetting_info_display_name = "N/A"
+            Settings.targetting_info_manufacturer = "N/A"
             Settings.targetting_info_vehicle_class = "N/A"
             Settings.targetting_info_max_speed_mph = 0
             Settings.targetting_info_max_speed_kph = 0
             menu.set_visible(targetting_display_name, false)
+            menu.set_visible(targetting_manufacturer, false)
             menu.set_visible(targetting_vehicle_class, false)
         end
 
         -- Ped
         if Settings.targetting_info_type == "Ped" then
+
+        else
+
+        end
+
+        -- Player
+        if Settings.targetting_info_type == "Player" then
             Settings.targetting_info_armor = PED.GET_PED_ARMOUR(Settings.targetting_handle)
-            Settings.targetting_info_max_armor = 0
-            if Settings.targetting_info_type == "Player" then
-                Settings.targetting_info_armor = PED.GET_PED_ARMOUR(Settings.targetting_handle)
-                Settings.targetting_info_max_armor = PLAYER.GET_PLAYER_MAX_ARMOUR(Settings.targetting_info_owner)
-            end
+            Settings.targetting_info_max_armor = PLAYER.GET_PLAYER_MAX_ARMOUR(Settings.targetting_info_owner)
             menu.set_visible(targetting_armor, true)
         else
             Settings.targetting_info_armor = 0
@@ -818,6 +940,7 @@ util.create_tick_handler(function()
         menu.set_menu_name(targetting_type, "Entity Type: "..Settings.targetting_info_type)
         menu.set_menu_name(targetting_name, "Name: "..Settings.targetting_info_name.." ("..Settings.targetting_info_hash..")")
         menu.set_menu_name(targetting_display_name, "Display Name: "..Settings.targetting_info_display_name)
+        menu.set_menu_name(targetting_manufacturer, "Manufacturer: "..Settings.targetting_info_manufacturer)
         menu.set_menu_name(targetting_vehicle_class, "Vehicle Class: "..Settings.targetting_info_vehicle_class)
         menu.set_menu_name(targetting_position_x, "X: "..round(Settings.targetting_info_position_x))
         menu.set_menu_name(targetting_position_y, "Y: "..round(Settings.targetting_info_position_y))
@@ -829,8 +952,8 @@ util.create_tick_handler(function()
 			menu.set_menu_name(targetting_position_screen_x, "Screen X: "..Settings.targetting_info_screen_x)
 			menu.set_menu_name(targetting_position_screen_y, "Screen Y: "..Settings.targetting_info_screen_y)
 		end
-        menu.set_menu_name(targetting_speed_mph, "Speed MPH: "..Settings.targetting_info_speed_mph.."("..round(Settings.targetting_info_max_speed_mph, 2)..")")
-        menu.set_menu_name(targetting_speed_kph, "Speed KPH: "..Settings.targetting_info_speed_kph.."("..round(Settings.targetting_info_max_speed_kph, 2)..")")
+        menu.set_menu_name(targetting_speed_mph, "Speed MPH: "..math.floor(Settings.targetting_info_speed_mph).."("..math.floor(Settings.targetting_info_max_speed_mph)..")")
+        menu.set_menu_name(targetting_speed_kph, "Speed KPH: "..math.floor(Settings.targetting_info_speed_kph).."("..math.floor(Settings.targetting_info_max_speed_kph)..")")
         menu.set_menu_name(targetting_health, "Health: "..Settings.targetting_info_health.."/"..Settings.targetting_info_max_health)
         menu.set_menu_name(targetting_armor, "Armor: "..Settings.targetting_info_armor.."/"..Settings.targetting_info_max_armor)
         menu.set_menu_name(targetting_script, "Script: "..Settings.targetting_info_script)
@@ -844,6 +967,7 @@ util.create_tick_handler(function()
         Settings.targetting_info_hash = 0
         Settings.targetting_info_name = "N/A"
         Settings.targetting_info_display_name = "N/A"
+        Settings.targetting_info_manufacturersss = "N/A"
         Settings.targetting_info_vehicle_class = "N/A"
         Settings.targetting_info_position_x = 0
         Settings.targetting_info_position_y = 0
@@ -865,6 +989,7 @@ util.create_tick_handler(function()
         menu.set_menu_name(targetting_type, "Entity Type: "..Settings.targetting_info_type)
         menu.set_menu_name(targetting_name, "Name: "..Settings.targetting_info_name.." ("..Settings.targetting_info_hash..")")
         menu.set_menu_name(targetting_display_name, "Display Name: "..Settings.targetting_info_display_name)
+        menu.set_menu_name(targetting_manufacturer, "Manufacturer: "..Settings.targetting_info_manufacturer)
         menu.set_menu_name(targetting_vehicle_class, "Vehicle Class: "..Settings.targetting_info_vehicle_class)
         menu.set_menu_name(targetting_position_x, "X: "..round(Settings.targetting_info_position_x))
         menu.set_menu_name(targetting_position_y, "Y: "..round(Settings.targetting_info_position_y))
@@ -880,6 +1005,38 @@ util.create_tick_handler(function()
         menu.set_menu_name(targetting_handle, "Handle: "..Settings.targetting_handle)
         menu.set_menu_name(targetting_pointer, "Pointer: "..Settings.targetting_pointer)
     end
+end)
+
+--instant respawn tick handler
+util.create_tick_handler(function()
+	if Settings.instant_respawn then
+		local player = players.user()
+		if not PLAYER.IS_PLAYER_CONTROL_ON(player) then return end
+		local ped = players.user_ped()
+		local ped_ptr = entities.handle_to_pointer(ped)
+		if entities.get_health(ped_ptr) < 100 then
+			local ped_coord = ENTITY.GET_ENTITY_COORDS(ped)
+			local ped_rot = ENTITY.GET_ENTITY_HEADING(ped)
+			local ped_weapon = WEAPON.GET_SELECTED_PED_WEAPON(ped)
+			local cam_rot = CAM.GET_FINAL_RENDERED_CAM_ROT(2)
+			local veh, seat
+			veh = PED.GET_VEHICLE_PED_IS_IN(ped, false)
+			if veh ~= 0 then
+				seat = GetPedSeat(veh, ped)
+			end
+			NETWORK.NETWORK_RESURRECT_LOCAL_PLAYER(ped_coord.x, ped_coord.y, ped_coord.z, ped_rot, false, false, 0)
+			WEAPON.GIVE_WEAPON_TO_PED(ped, ped_weapon, 0, false, true)
+			CAM.SET_GAMEPLAY_CAM_RELATIVE_PITCH(cam_rot.x, 1)
+			CAM.SET_GAMEPLAY_CAM_RELATIVE_HEADING(cam_rot.z - ped_rot)
+			if seat then
+				TASK.TASK_WARP_PED_INTO_VEHICLE(ped, veh, seat)
+			end
+			util.yield(200)
+			if not seat and PED.IS_PED_RAGDOLL(ped) then
+				TASK.CLEAR_PED_TASKS_IMMEDIATELY(ped)
+			end
+		end
+	end
 end)
 
 util.keep_running()

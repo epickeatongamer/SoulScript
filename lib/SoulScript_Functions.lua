@@ -237,11 +237,11 @@ function round(num, numDecimalPlaces)
 end
 
 --esp bounding box (thanks ren for an improvement to it)
-function draw_line(start, to, colour)
+function DrawLine(start, to, colour)
 	GRAPHICS.DRAW_LINE(start.x, start.y, start.z, to.x, to.y, to.z, math.floor(colour.r*255), math.floor(colour.g*255), math.floor(colour.b*255), math.floor(colour.a*255))
 end
 local memory_pos, memory_pos2 = memory.alloc(24), memory.alloc(24)
-function draw_bounding_box(entity_ptr, max_distance, ent_pos, colour)
+function DrawBoundaryBox(entity_ptr, max_distance, ent_pos, colour)
     if entity_ptr ~= nil then
         if is_handle(entity_ptr) then
             util.toast("[SoulScript] You need to pass a pointer to bounding box")
@@ -263,20 +263,20 @@ function draw_bounding_box(entity_ptr, max_distance, ent_pos, colour)
         local bot_rear_left =   ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(entity, dimensions_min.x, dimensions_min.y, dimensions_min.z)
         local bot_rear_right =  ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(entity, dimensions_max.x, dimensions_min.y, dimensions_min.z)
 
-        draw_line(top_front_right,   top_front_left,     colour)
-        draw_line(top_front_left,    top_rear_left,      colour)
-        draw_line(top_rear_left,     top_rear_right,     colour)
-        draw_line(top_rear_right,    top_front_right,    colour)
+        DrawLine(top_front_right,   top_front_left,     colour)
+        DrawLine(top_front_left,    top_rear_left,      colour)
+        DrawLine(top_rear_left,     top_rear_right,     colour)
+        DrawLine(top_rear_right,    top_front_right,    colour)
 
-        draw_line(top_front_right,   bot_front_right,    colour)
-        draw_line(top_front_left,    bot_front_left,     colour)
-        draw_line(top_rear_right,    bot_rear_right,     colour)
-        draw_line(top_rear_left,     bot_rear_left,      colour)
+        DrawLine(top_front_right,   bot_front_right,    colour)
+        DrawLine(top_front_left,    bot_front_left,     colour)
+        DrawLine(top_rear_right,    bot_rear_right,     colour)
+        DrawLine(top_rear_left,     bot_rear_left,      colour)
 
-        draw_line(bot_front_right,   bot_front_left,     colour)
-        draw_line(bot_front_left,    bot_rear_left,      colour)
-        draw_line(bot_rear_left,     bot_rear_right,     colour)
-        draw_line(bot_rear_right,    bot_front_right,    colour)
+        DrawLine(bot_front_right,   bot_front_left,     colour)
+        DrawLine(bot_front_left,    bot_rear_left,      colour)
+        DrawLine(bot_rear_left,     bot_rear_right,     colour)
+        DrawLine(bot_rear_right,    bot_front_right,    colour)
         if not ENTITY.IS_ENTITY_A_MISSION_ENTITY(entity) or ENTITY.GET_ENTITY_SCRIPT(entity, 0) == "" then
             SHAPETEST.RELEASE_SCRIPT_GUID_FROM_ENTITY(entity)
         end
@@ -291,4 +291,23 @@ function IsPedEnemy(ped)
     else
         return false
     end
+end
+
+--get seat ped is using
+function GetPedSeat(vehicle, ped)
+    for i=-1,14 do
+        local ped_in_seat = VEHICLE.GET_PED_IN_VEHICLE_SEAT(vehicle, i, false)
+        if ped_in_seat == ped then
+            return i
+        end
+    end
+end
+
+--check if it is inside of a certain list
+function IsInParent(commandRef, parent)
+    repeat
+        if commandRef:equals(parent) then return true end
+        commandRef = commandRef:getParent()
+    until not commandRef:isValid()
+    return false
 end
