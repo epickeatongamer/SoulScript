@@ -46,6 +46,7 @@ Settings.drive_type = 0
 Settings.instant_respawn = false
 Settings.folder_open_self = false
 Settings.folder_open_vehicle = false
+Settings.join_timer = false
 
 -- Tables
 local vehicle_blip_esp_table = {}
@@ -53,6 +54,7 @@ local pedestrian_blip_esp_table = {}
 local object_blip_esp_table = {}
 local pickup_blip_esp_table = {}
 local player_blip_table = {}
+local join_timer_offsets = {}
 
 -- Local List: Self
 local self_list = menu.list(menu.my_root(), "Self", {}, "", function() Settings.folder_open_self = true end, function() Settings.folder_open_self = false end)
@@ -207,7 +209,7 @@ online_list:toggle_loop("Chat Fix", {}, "Fixes the location of chat on ultrawide
 	local mp_chat_scaleform_handle = GRAPHICS.REQUEST_SCALEFORM_MOVIE("multiplayer_chat")
 	GRAPHICS.DRAW_SCALEFORM_MOVIE(mp_chat_scaleform_handle, 0.673, 0.5, 1, 1, 255, 255, 255, 255, 1)
 end)
-online_list:toggle_loop("Show Talking Players", {}, "Draws a list of players talking at the top of screen", function()
+online_list:toggle_loop("Show Talking Players", {}, "Draws a list of players talking at the top of the screen", function()
 	if util.is_session_started() and not util.is_session_transition_active() then
 		local talking = 0
 		for _, pid in pairs(players.list()) do
@@ -217,6 +219,12 @@ online_list:toggle_loop("Show Talking Players", {}, "Draws a list of players tal
 			end
 		end
 	end
+end)
+online_list:toggle("Show Joining Players", {}, "Draws a list of players currently joining at the top of the screen", function(Toggle)
+	Settings.join_timer = Toggle
+end)
+online_list:action("Cancel Join", {"stopjoin"}, "", function()
+    NETWORK.NETWORK_SESSION_FORCE_CANCEL_INVITE()
 end)
 
 -- Local List: World
@@ -1037,6 +1045,35 @@ util.create_tick_handler(function()
 			end
 		end
 	end
+end)
+
+-- tick handler for other stuff
+util.create_tick_handler(function()
+    -- Join Timers
+    local joining_offset = 0
+    for pos, pid in ipairs(players.list()) do
+        if memory.read_byte(memory.script_global(2657589 + 1 + (pid * 466) + 232)) == 0 then
+            join_timer_offsets[pid] = joining_offset
+            joining_offset = joining_offset + 1
+        end
+    end
+end)
+
+-- On Join function
+players.on_join(function(pid)
+	if Settings.join_timer then
+		local timer = 0
+		repeat
+			timer = timer + 1
+			directx.draw_text(0, 0 + (join_timer_offsets[pid] * 0.02), players.get_name(pid)..": "..(timer/100).."s", ALIGN_TOP_LEFT, 0.5, pinkcolor, false)
+			util.yield()
+		until memory.read_byte(memory.script_global(2657589 + 1 + (pid * 466) + 232)) == 99
+	end
+end)
+
+-- On Leave function
+players.on_leave(function(pid, username)
+    --code
 end)
 
 util.keep_running()
