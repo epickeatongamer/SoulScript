@@ -1052,7 +1052,7 @@ util.create_tick_handler(function()
     -- Join Timers
     local joining_offset = 0
     for pos, pid in ipairs(players.list()) do
-        if memory.read_byte(memory.script_global(2657589 + 1 + (pid * 466) + 232)) == 0 then
+        if Settings.join_timer and memory.read_byte(memory.script_global(2657589 + 1 + (pid * 466) + 232)) == 0 and players.get_name(pid) ~= nil then
             join_timer_offsets[pid] = joining_offset
             joining_offset = joining_offset + 1
         end
@@ -1061,13 +1061,14 @@ end)
 
 -- On Join function
 players.on_join(function(pid)
-	if Settings.join_timer then
+	if Settings.join_timer and players.get_name(pid) ~= nil then
 		local timer = 0
 		repeat
 			timer = timer + 1
-			directx.draw_text(0, 0 + (join_timer_offsets[pid] * 0.02), players.get_name(pid)..": "..(timer/100).."s", ALIGN_TOP_LEFT, 0.5, pinkcolor, false)
+			directx.draw_text(0, 0 + (join_timer_offsets[pid] * 0.02), players.get_name(pid).." ("..pid.."): "..(timer/100).."s", ALIGN_TOP_LEFT, 0.5, pinkcolor, false)
 			util.yield()
 		until memory.read_byte(memory.script_global(2657589 + 1 + (pid * 466) + 232)) == 99
+        join_timer_offsets[pid] = 0
 	end
 end)
 
