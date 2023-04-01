@@ -312,10 +312,11 @@ function IsInParent(commandRef, parent)
     return false
 end
 
---edited get_name function
-function PlayerNameValid(pid, name)
-    if (name == players.get_name(pid)) ~= "UndiscoveredPlayer" then
-        return true
-    end
-    return false
+--in transition functio
+function IsPlayerLoaded(pid)
+	if player_id == memory.read_int(memory.script_global(2672505 + 3)) and NETWORK.NETWORK_IS_PLAYER_ACTIVE(pid) and PLAYER.IS_PLAYER_PLAYING(pid) then
+		return memory.read_int(memory.script_global(2672505 + 2)) ~= 0
+	elseif memory.read_int(memory.script_global(2657589 + 1 + (pid * 466))) ~= 4 then
+		return false
+	end
 end

@@ -3,6 +3,7 @@
     Prism - Few little checks for clear area and method to clear projectiles/sounds
     Nowiry - The function to get aiming target
     Aaron - Instant respawn feature
+    Sapphire - helping with the join timer
 ]]
 util.require_natives("1663599433")
 require("SoulScript_Functions")
@@ -1052,29 +1053,28 @@ util.create_tick_handler(function()
 	end
 end)
 
+
+local joining_tbl = {}
+
 -- tick handler for other stuff
 util.create_tick_handler(function()
     -- Join Timers
-    local joining_offset = 0
-    for pos, pid in ipairs(players.list()) do
-        if Settings.join_timer and memory.read_byte(memory.script_global(2657589 + 1 + (pid * 466) + 232)) == 0 and PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid) and pid ~= players.user() and PlayerNameValid(pid, players.get_name(pid)) then
-            join_timer_offsets[pid] = joining_offset
-            joining_offset = joining_offset + 1
-        end
-    end
+    local joining_text = ""
+    joining_text = table.concat(joining_tbl, "\n")
+    directx.draw_text(0, 0, joining_text, ALIGN_TOP_LEFT, 0.5, pinkcolor, false)
+    joining_tbl = {}
 end)
 
 -- On Join function
 players.on_join(function(pid)
-	if Settings.join_timer and PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid) and pid ~= players.user() and PlayerNameValid(pid, players.get_name(pid)) then
-		local timer = 0
-		repeat
-			timer = timer + 1
-            if join_timer_offsets[pid] == nil then join_timer_offsets[pid] = 32; util.toast("Nil value for "..pid) end
-			directx.draw_text(0, (join_timer_offsets[pid] * 0.02), players.get_name(pid).." ("..pid.."): "..(timer/100).."s", ALIGN_TOP_LEFT, 0.5, pinkcolor, false)
-			util.yield()
-		until memory.read_byte(memory.script_global(2657589 + 1 + (pid * 466) + 232)) == 99
-        if timer > 2000 --[[20 seconds]] then util.toast(players.get_name(pid).." took "..(timer/100).."s to load into the lobby", TOAST_CONSOLE) end
+	if Settings.join_timer then
+        local join_time = os.millis()
+        while util.is_session_started() and players.exists(pid) and not IsPlayerLoaded(pid) do
+            if memory.read_int(memory.script_global(1574993)) ~= 20 then 
+                joining_tbl[#joining_tbl + 1] = players.get_name(pid) .. " is loading into the session (" .. round((os.millis() - join_time) / 1000, 2) .. "s)"
+            end
+            util.yield()
+        end
 	end
 end)
 
@@ -1083,4 +1083,5 @@ players.on_leave(function(pid, username)
     --code
 end)
 
+players.dispatch_on_join()
 util.keep_running()
