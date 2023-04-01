@@ -2,7 +2,6 @@
     Credits
     Prism - Few little checks for clear area and method to clear projectiles/sounds
     Nowiry - The function to get aiming target
-    Sapphire - Helping with dlc stuff
     Aaron - Instant respawn feature
 ]]
 util.require_natives("1663599433")
@@ -81,7 +80,7 @@ local vehicle_list = menu.list(menu.my_root(), "Vehicle", {}, "", function() Set
 local vehicle_list_handling = menu.list(vehicle_list, "Handling", {}, "", function(); end)
 
 vehicle_list:toggle_loop("Vehicle Friendly Fire", {""}, "Be able to shoot people inside your current vehicle", function()
-	if players.get_vehicle_model(players.user()) then
+	if players.get_vehicle_model(players.user()) ~= 0 then
 		local vehicle = entities.get_user_vehicle_as_handle()
 		local my_group = PED.GET_PED_RELATIONSHIP_GROUP_HASH(players.user_ped())
 
@@ -98,7 +97,7 @@ vehicle_list:toggle_loop("Vehicle Friendly Fire", {""}, "Be able to shoot people
 	end
 end)
 vehicle_list:toggle_loop("No Object Collision", {""}, "No collision with objects", function()
-	if players.get_vehicle_model(players.user()) then
+	if players.get_vehicle_model(players.user()) ~= 0 then
 		local vehicle = entities.get_user_vehicle_as_handle()
 		for _, object in pairs(entities.get_all_objects_as_handles()) do
 			ENTITY.SET_ENTITY_NO_COLLISION_ENTITY(object, vehicle, true)
@@ -107,25 +106,25 @@ vehicle_list:toggle_loop("No Object Collision", {""}, "No collision with objects
 	end
 end)
 vehicle_list:toggle_loop("Shoot Flames", {""}, "", function (toggle)
-	if players.get_vehicle_model(players.user()) then
+	if players.get_vehicle_model(players.user()) ~= 0 then
 		entities.set_rpm(entities.get_user_vehicle_as_pointer(), 1.2)
     	util.yield(250)
 	end
 end)
 vehicle_list:toggle_loop("Engine Lump", {""}, "", function (toggle)
-	if players.get_vehicle_model(players.user()) then
+	if players.get_vehicle_model(players.user()) ~= 0 then
 		entities.set_rpm(entities.get_user_vehicle_as_pointer(), 1.006)
     	util.yield(600)
 	end
 end)
 vehicle_list_handling:toggle_loop("Enable F1 Boost", {""}, "Need to respawn vehicle for it to take effect", function (toggle)
-	if players.get_vehicle_model(players.user()) then
+	if players.get_vehicle_model(players.user()) ~= 0 then
 		MISC.SET_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 2)
         util.yield(100)
 	end
 end, function() MISC.CLEAR_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 2) end)
 vehicle_list_handling:toggle_loop("Offroad Mode", {""}, "Need to respawn vehicle for it to take effect", function (toggle)
-	if players.get_vehicle_model(players.user()) then
+	if players.get_vehicle_model(players.user()) ~= 0 then
 		MISC.SET_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 21)
         util.yield(100)
 	end
@@ -144,7 +143,7 @@ vehicle_list_handling:list_select("Steering Type", {}, "", {"Front", "All", "Rea
 	end
 end)
 vehicle_list_handling:toggle_loop("Apply Steering Type", {""}, "Need to respawn vehicle for it to take effect", function (toggle)
-	if players.get_vehicle_model(players.user()) then
+	if players.get_vehicle_model(players.user()) ~= 0 then
         if Settings.steering_type == 0 then
 		    MISC.CLEAR_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 5)
 		    MISC.CLEAR_BIT(entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer()) + 0x128, 7)
@@ -184,7 +183,7 @@ vehicle_list_handling:list_select("Drive Type", {}, "", {"RWD", "AWD (30:70)", "
 	end
 end)
 vehicle_list_handling:toggle_loop("Apply Drive Type", {""}, "These notes need to be read\n\nfwd is very temperamental\n\nfull awd is temperamental aswell, but needs the vehicle to be respawned to apply most of the time", function (toggle)
-	if players.get_vehicle_model(players.user()) then
+	if players.get_vehicle_model(players.user()) ~= 0 then
         local CHandlingData = entities.vehicle_get_handling(entities.get_user_vehicle_as_pointer())
         if Settings.drive_type == 0 then
 		    memory.write_float(CHandlingData + 0x0044, "1.000000") -- rear
@@ -780,12 +779,12 @@ end, function()
 		table.remove(player_blip_table, pos)
 	end
 end)
-world_list_blips:toggle_loop("Ignore Police Cones", {}, "", function()
-    if players.get_vehicle_model(players.user()) then
+world_list_blips:toggle_loop("Ignore Police Cones", {}, "Only works in vehicles", function()
+    if players.get_vehicle_model(players.user()) ~= 0 then
 		VEHICLE.SET_DISABLE_WANTED_CONES_RESPONSE(entities.get_user_vehicle_as_handle(), true)
 	end
 end, function() 
-    if players.get_vehicle_model(players.user()) then
+    if players.get_vehicle_model(players.user()) ~= 0 then
 		VEHICLE.SET_DISABLE_WANTED_CONES_RESPONSE(entities.get_user_vehicle_as_handle(), false)
 	end
 end)
@@ -872,7 +871,7 @@ end)
 settings_list_bounding_box:toggle_loop("Draw in vehicle options", {}, "", function()
     if menu.is_open() then
 	    if Settings.folder_open_vehicle or IsInParent(menu.get_current_menu_list(), menu.ref_by_path("Vehicle")) then
-	    	if players.get_vehicle_model(players.user()) then
+	    	if players.get_vehicle_model(players.user()) ~= 0 then
                 local vehicle = entities.get_user_vehicle_as_pointer()
                 local position = entities.get_position(vehicle)
 	    		DrawBoundaryBox(vehicle, position)
@@ -1058,7 +1057,7 @@ util.create_tick_handler(function()
     -- Join Timers
     local joining_offset = 0
     for pos, pid in ipairs(players.list()) do
-        if Settings.join_timer and memory.read_byte(memory.script_global(2657589 + 1 + (pid * 466) + 232)) == 0 and PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid) and pid ~= players.user() then
+        if Settings.join_timer and memory.read_byte(memory.script_global(2657589 + 1 + (pid * 466) + 232)) == 0 and PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid) and pid ~= players.user() and PlayerNameValid(pid, players.get_name(pid)) then
             join_timer_offsets[pid] = joining_offset
             joining_offset = joining_offset + 1
         end
@@ -1067,7 +1066,7 @@ end)
 
 -- On Join function
 players.on_join(function(pid)
-	if Settings.join_timer and PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid) and pid ~= players.user() then
+	if Settings.join_timer and PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid) and pid ~= players.user() and PlayerNameValid(pid, players.get_name(pid)) then
 		local timer = 0
 		repeat
 			timer = timer + 1
@@ -1075,7 +1074,7 @@ players.on_join(function(pid)
 			directx.draw_text(0, (join_timer_offsets[pid] * 0.02), players.get_name(pid).." ("..pid.."): "..(timer/100).."s", ALIGN_TOP_LEFT, 0.5, pinkcolor, false)
 			util.yield()
 		until memory.read_byte(memory.script_global(2657589 + 1 + (pid * 466) + 232)) == 99
-        if timer > 1000 --[[10 seconds]] then util.toast(players.get_name(pid).." took "..(timer/100).."s to load into the lobby", TOAST_CONSOLE) end
+        if timer > 2000 --[[20 seconds]] then util.toast(players.get_name(pid).." took "..(timer/100).."s to load into the lobby", TOAST_CONSOLE) end
 	end
 end)
 

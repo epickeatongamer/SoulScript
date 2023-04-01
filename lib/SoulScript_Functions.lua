@@ -311,3 +311,11 @@ function IsInParent(commandRef, parent)
     until not commandRef:isValid()
     return false
 end
+
+--edited get_name function
+function PlayerNameValid(pid, name)
+    if (name == players.get_name(pid)) ~= "UndiscoveredPlayer" then
+        return true
+    end
+    return false
+end
