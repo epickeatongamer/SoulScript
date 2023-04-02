@@ -254,12 +254,12 @@ world_list:list_select("Rain Puddles", {}, "", {"None", "Half", "Full"}, 1, func
         break
     end
 end)
-world_list:slider("Puddle ripple intensity", {"puddleripples"}, "", 0, 2147483647, Settings.ripple_size, 1, function(s)
-	Settings.ripple_size = s
-end)
-world_list:toggle_loop("Apply ripple intensity", {}, "", function()
-	memory.write_float(memory.rip(memory.scan("48 03 C1 EB 0C 48 8D 0D") + 8) + 0xE9C, Settings.ripple_size)
-end)
+--world_list:slider("Puddle ripple intensity", {"puddleripples"}, "", 0, 2147483647, Settings.ripple_size, 1, function(s)
+--	Settings.ripple_size = s
+--end)
+--world_list:toggle_loop("Apply ripple intensity", {}, "", function()
+--	memory.write_float(memory.rip(memory.scan("48 03 C1 EB 0C 48 8D 0D") + 8) + 0xE9C, Settings.ripple_size)
+--end)
 
 world_list_cleararea:list_action("Clear All", {}, "", {"Vehicles", "Peds", "Objects", "Pickups", "Ropes", "Projectiles", "Sounds"}, function(index, name)
 	util.toast("Clearing "..name:lower())
