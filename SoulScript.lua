@@ -56,6 +56,7 @@ Settings.folder_open_self = false
 Settings.folder_open_vehicle = false
 Settings.join_timer = false
 Settings.player_cone_colour = 1
+Settings.ripple_size = 1
 
 -- Local List: Self
 local self_list = menu.list(menu.my_root(), "Self", {}, "", function() Settings.folder_open_self = true end, function() Settings.folder_open_self = false end)
@@ -239,6 +240,26 @@ local world_list_esp_pickups = menu.list(world_list_esp, "Pickups", {}, "", func
 --local world_list_esp_enemys = menu.list(world_list_esp, "Enemys", {}, "", function(); end)
 local world_list_spawner = menu.list(world_list, "Spawner", {}, "", function(); end)
 local world_list_blips = menu.list(world_list, "Blip Options", {}, "", function(); end)
+
+world_list:list_select("Rain Puddles", {}, "", {"None", "Half", "Full"}, 1, function(index, value)
+    switch index do
+        case 1:
+            memory.write_float(memory.rip(memory.scan("48 03 C1 EB 0C 48 8D 0D") + 8) + 0xEC0, 0.0)
+        break
+        case 2:
+            memory.write_float(memory.rip(memory.scan("48 03 C1 EB 0C 48 8D 0D") + 8) + 0xEC0, 0.5)
+        break
+        case 3:
+            memory.write_float(memory.rip(memory.scan("48 03 C1 EB 0C 48 8D 0D") + 8) + 0xEC0, 1.0)
+        break
+    end
+end)
+world_list:slider("Puddle ripple intensity", {"puddleripples"}, "", 0, 2147483647, Settings.ripple_size, 1, function(s)
+	Settings.ripple_size = s
+end)
+world_list:toggle_loop("Apply ripple intensity", {}, "", function()
+	memory.write_float(memory.rip(memory.scan("48 03 C1 EB 0C 48 8D 0D") + 8) + 0xE9C, Settings.ripple_size)
+end)
 
 world_list_cleararea:list_action("Clear All", {}, "", {"Vehicles", "Peds", "Objects", "Pickups", "Ropes", "Projectiles", "Sounds"}, function(index, name)
 	util.toast("Clearing "..name:lower())
@@ -794,7 +815,7 @@ misc_list:toggle_loop("Draw Sphere", {}, "", function(Toggle)
 	local coords = ENTITY.GET_ENTITY_COORDS(players.user_ped())
 	GRAPHICS.DRAW_MARKER_SPHERE(coords.x, coords.y, coords.z, Settings.sphere_size, 255, 0, 255, 0.5)
 end)
-misc_list:slider("Sphere Radius", {"sphereradius"}, "", 1, 999999999, Settings.sphere_size, 1, function(s)
+misc_list:slider("Sphere Radius", {"sphereradius"}, "", 1, 2147483647, Settings.sphere_size, 1, function(s)
 	Settings.sphere_size = s
 end)
 misc_list:toggle_loop("Auto Accept Game Warnings", {}, "", function()
@@ -1062,7 +1083,6 @@ players.on_join(function(pid)
 	if Settings.join_timer then
         local join_time = os.millis()
         while util.is_session_started() and players.exists(pid) and not IsPlayerLoaded(pid) do
-            util.toast(players.get_name(pid))
             if memory.read_int(memory.script_global(1574993)) ~= 20 then 
                 joining_tbl[#joining_tbl + 1] = players.get_name(pid) .. " is loading into the session (" .. round((os.millis() - join_time) / 1000, 2) .. "s)"
             end
@@ -1074,6 +1094,11 @@ end)
 -- On Leave function
 players.on_leave(function(pid, username)
     --code
+end)
+
+-- On Stop Function
+util.on_stop(function()
+    memory.write_float(memory.rip(memory.scan("48 03 C1 EB 0C 48 8D 0D") + 8) + 0xEC0, 0.0) -- stop the script from causing an exception on unload
 end)
 
 players.dispatch_on_join()
