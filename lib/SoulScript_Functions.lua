@@ -312,11 +312,14 @@ function IsInParent(commandRef, parent)
     return false
 end
 
---in transition functio
+--in transition check
 function IsPlayerLoaded(pid)
-	if player_id == memory.read_int(memory.script_global(2672505 + 3)) and NETWORK.NETWORK_IS_PLAYER_ACTIVE(pid) and PLAYER.IS_PLAYER_PLAYING(pid) then
-		return memory.read_int(memory.script_global(2672505 + 2)) ~= 0
-	elseif memory.read_int(memory.script_global(2657589 + 1 + (pid * 466))) ~= 4 then
-		return false
-	end
+    if not NETWORK.NETWORK_IS_PLAYER_ACTIVE(pid) then return false end
+	if not PLAYER.IS_PLAYER_PLAYING(pid) then return false end
+    if pid == memory.read_int(memory.script_global(2672505 + 3)) then
+        return memory.read_int(memory.script_global(2672505 + 2)) ~= 0
+    elseif memory.read_int(memory.script_global(2657589 + 1 + (pid * 466))) ~= 4 then
+        return false
+    end
+    return true
 end

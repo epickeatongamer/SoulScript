@@ -14,7 +14,7 @@ local pedestrian_blip_esp_table = {}
 local object_blip_esp_table = {}
 local pickup_blip_esp_table = {}
 local player_blip_table = {}
-local join_timer_offsets = {}
+local joining_tbl = {}
 
 -- Colours
 local whitecolor = {r = 1.0, g = 1.0, b = 1.0, a = 1.0}
@@ -56,11 +56,6 @@ Settings.folder_open_self = false
 Settings.folder_open_vehicle = false
 Settings.join_timer = false
 Settings.player_cone_colour = 1
-
--- Load Timer Table
-for i = 0, 31 do
-	join_timer_offsets[i] = 0
-end
 
 -- Local List: Self
 local self_list = menu.list(menu.my_root(), "Self", {}, "", function() Settings.folder_open_self = true end, function() Settings.folder_open_self = false end)
@@ -1053,9 +1048,6 @@ util.create_tick_handler(function()
 	end
 end)
 
-
-local joining_tbl = {}
-
 -- tick handler for other stuff
 util.create_tick_handler(function()
     -- Join Timers
@@ -1070,6 +1062,7 @@ players.on_join(function(pid)
 	if Settings.join_timer then
         local join_time = os.millis()
         while util.is_session_started() and players.exists(pid) and not IsPlayerLoaded(pid) do
+            util.toast(players.get_name(pid))
             if memory.read_int(memory.script_global(1574993)) ~= 20 then 
                 joining_tbl[#joining_tbl + 1] = players.get_name(pid) .. " is loading into the session (" .. round((os.millis() - join_time) / 1000, 2) .. "s)"
             end
